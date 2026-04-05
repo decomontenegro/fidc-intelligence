@@ -1437,13 +1437,16 @@ function renderTableRows() {
   document.getElementById('tbl-spacer-top').style.height = (startIdx * ROW_HEIGHT) + 'px';
   document.getElementById('tbl-spacer-bottom').style.height = ((funds.length - endIdx) * ROW_HEIGHT) + 'px';
 
+  // Store funds in window for onclick access
+  window._tableFunds = funds;
+
   const rowsDiv = document.getElementById('tbl-rows');
   rowsDiv.innerHTML = funds.slice(startIdx, endIdx).map((d,i) => {
     const idx = startIdx + i;
     const inadPct = d.pl > 0 ? (d.inadimplencia / d.pl * 100).toFixed(1).replace('.',',') + '%' : '—';
     const isSelected = state.selectedFund && state.selectedFund.cnpj === d.cnpj;
     return `
-      <div class="table-row${isSelected ? ' selected' : ''}" data-idx="${idx}" style="height:${ROW_HEIGHT}px">
+      <div class="table-row${isSelected ? ' selected' : ''}" data-idx="${idx}" style="height:${ROW_HEIGHT}px;cursor:pointer" onclick="openFundModal(window._tableFunds[${idx}])">
         <div class="td td-primary" title="${d.nome}">${d.nome.length > 40 ? d.nome.slice(0,40) + '…' : d.nome}</div>
         <div class="td" title="${d.admin}">${d.admin.length > 25 ? d.admin.slice(0,25) + '…' : d.admin}</div>
         <div class="td" style="color:var(--ng-orange);font-weight:600">${fmtBRL(d.pl)}</div>
@@ -1453,14 +1456,6 @@ function renderTableRows() {
       </div>
     `;
   }).join('');
-
-  rowsDiv.querySelectorAll('.table-row').forEach(row => {
-    row.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const idx = parseInt(row.dataset.idx);
-      openFundModal(funds[idx]);
-    });
-  });
 }
 
 function renderFundosPanel() {
