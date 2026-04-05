@@ -2036,6 +2036,29 @@ var DETAIL_DATA = null;
 var DETAIL_LOADING = false;
 var DETAIL_CALLBACKS = [];
 
+// FUND HISTORY DATA (lazy loaded)
+var HISTORY_DATA = null;
+var HISTORY_LOADING = false;
+var HISTORY_CALLBACKS = [];
+
+function loadHistoryData(cb) {
+  if (HISTORY_DATA) { cb(HISTORY_DATA); return; }
+  HISTORY_CALLBACKS.push(cb);
+  if (HISTORY_LOADING) return;
+  HISTORY_LOADING = true;
+  fetch('fidcs_history.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      HISTORY_DATA = d;
+      HISTORY_CALLBACKS.forEach(function(fn) { fn(d); });
+      HISTORY_CALLBACKS = [];
+    })
+    .catch(function() {
+      HISTORY_CALLBACKS.forEach(function(fn) { fn({}); });
+      HISTORY_CALLBACKS = [];
+    });
+}
+
 function loadDetailData(cb) {
   if (DETAIL_DATA) { cb(DETAIL_DATA); return; }
   DETAIL_CALLBACKS.push(cb);
@@ -2059,7 +2082,12 @@ function openFundModal(d) {
   document.getElementById('fund-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('modal-body').innerHTML = '<div class="modal-no-data" style="padding:40px">Carregando dados...</div>';
-  loadDetailData(function(detail) { renderModalBody(d, detail[d.cnpj] || {}); });
+  var detailResult = null, historyResult = null;
+  function tryRender() {
+    if (detailResult !== null && historyResult !== null) renderModalBody(d, detailResult, historyResult);
+  }
+  loadDetailData(function(detail) { detailResult = detail[d.cnpj] || {}; tryRender(); });
+  loadHistoryData(function(hist) { historyResult = hist[d.cnpj] || []; tryRender(); });
 }
 
 function closeFundModal() {
@@ -2073,7 +2101,8 @@ document.getElementById('fund-modal').addEventListener('click', function(e) {
 });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeFundModal(); });
 
-function renderModalBody(d, det) {
+function renderModalBody(d, det, hist) {
+  hist = hist || [];
   var inadPct = d.pl > 0 ? (d.inadimplencia / d.pl * 100) : 0;
   var alavPct = d.pl > 0 && d.ativo_total > d.pl ? ((d.ativo_total / d.pl - 1) * 100) : 0;
 
@@ -2132,9 +2161,75 @@ function renderModalBody(d, det) {
         '<div class="modal-section-title">Estrutura de Cotas (Fev/2026)</div>' +
         cotasHtml +
       '</div>' +
+    '</div>' +
+    '<div style="margin-top:16px">' +
+      '<div class="modal-chart-box" style="grid-column:1/-1">' +
+        '<div class="modal-section-title">Evolucao do Patrimonio Liquido (12 meses)</div>' +
+        '<div id="modal-pl-chart"></div>' +
+      '</div>' +
     '</div>';
 
   lucide.createIcons();
+  setTimeout(function() { renderPLChart(hist); }, 10);
+}
+
+function renderPLChart(hist) {
+  var el = document.getElementById('modal-pl-chart');
+  if (!el) return;
+  if (!hist || hist.length < 2) {
+    el.innerHTML = '<div class="modal-no-data">Sem historico disponivel</div>';
+    return;
+  }
+
+  var W = el.clientWidth || 600;
+  var H = 140;
+  var margin = {top: 10, right: 16, bottom: 28, left: 60};
+  var w = W - margin.left - margin.right;
+  var h = H - margin.top - margin.bottom;
+
+  var months = hist.map(function(p) { return p.m; });
+  var values = hist.map(function(p) { return p.pl; });
+  var minV = Math.min.apply(null, values);
+  var maxV = Math.max.apply(null, values);
+  var pad = (maxV - minV) * 0.1 || maxV * 0.1 || 1;
+  minV = Math.max(0, minV - pad);
+  maxV = maxV + pad;
+
+  var xScale = function(i) { return margin.left + (i / (months.length - 1)) * w; };
+  var yScale = function(v) { return margin.top + h - ((v - minV) / (maxV - minV)) * h; };
+
+  // Build SVG path
+  var pts = values.map(function(v, i) { return [xScale(i), yScale(v)]; });
+  var linePath = 'M' + pts.map(function(p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join('L');
+  var areaPath = linePath + 'L' + xScale(months.length-1).toFixed(1) + ',' + (margin.top+h) + 'L' + xScale(0).toFixed(1) + ',' + (margin.top+h) + 'Z';
+
+  // Y ticks
+  var yTicks = [minV, (minV+maxV)/2, maxV];
+  var yTicksHtml = yTicks.map(function(v) {
+    var y = yScale(v);
+    return '<line x1="' + margin.left + '" x2="' + (margin.left+w) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="rgba(255,255,255,.06)" stroke-dasharray="3,3"/>'
+      + '<text x="' + (margin.left-6) + '" y="' + y.toFixed(1) + '" text-anchor="end" dominant-baseline="middle" fill="#6b7280" font-size="9">' + fmtBRL(v) + '</text>';
+  }).join('');
+
+  // X ticks (first and last and middle)
+  var xIdxs = [0, Math.floor(months.length/2), months.length-1];
+  var xTicksHtml = xIdxs.map(function(i) {
+    return '<text x="' + xScale(i).toFixed(1) + '" y="' + (margin.top+h+16) + '" text-anchor="middle" fill="#6b7280" font-size="9">' + months[i] + '</text>';
+  }).join('');
+
+  // Last value label
+  var lastX = xScale(months.length-1);
+  var lastY = yScale(values[months.length-1]);
+  var dotHtml = '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="3" fill="#22d3ee"/>';
+
+  el.innerHTML = '<svg width="100%" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+    '<defs><linearGradient id="plGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22d3ee" stop-opacity="0.25"/><stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/></linearGradient></defs>' +
+    yTicksHtml +
+    '<path d="' + areaPath + '" fill="url(#plGrad)"/>' +
+    '<path d="' + linePath + '" fill="none" stroke="#22d3ee" stroke-width="1.5"/>' +
+    dotHtml +
+    xTicksHtml +
+    '</svg>';
 }
 
 function buildModalAlerts(d, det, inadPct, alavPct) {
