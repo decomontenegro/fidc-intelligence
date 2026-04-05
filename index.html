@@ -1455,7 +1455,8 @@ function renderTableRows() {
   }).join('');
 
   rowsDiv.querySelectorAll('.table-row').forEach(row => {
-    row.addEventListener('click', () => {
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
       const idx = parseInt(row.dataset.idx);
       openFundModal(funds[idx]);
     });
@@ -2304,9 +2305,15 @@ renderMode('overview');
   document.getElementById('loading').style.display = 'none';
 });
 
-// Handle resize
+// Handle resize (debounced — avoid re-render on minor viewport shifts)
+let _resizeTimer;
 window.addEventListener('resize', () => {
-  renderMode(state.mode);
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    // Only re-render layout-sensitive modes, not fundos table
+    if (state.mode !== 'fundos') renderMode(state.mode);
+    else renderFundosPanel();
+  }, 250);
 });
 </script>
 
