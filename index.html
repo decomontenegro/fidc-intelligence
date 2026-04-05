@@ -2073,7 +2073,7 @@ function loadDetailData(cb) {
     });
 }
 
-function openFundModal(d) {
+window.openFundModal = function openFundModal(d) {
   document.getElementById('modal-fund-name').textContent = d.nome;
   document.getElementById('fund-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
