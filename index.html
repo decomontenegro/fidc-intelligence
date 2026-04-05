@@ -636,6 +636,102 @@ body {
 .cond-fill-open { height: 100%; background: var(--cyan); border-radius: 3px; transition: width .5s; }
 .cond-fill-closed { height: 100%; background: var(--ng-orange); border-radius: 3px; transition: width .5s; }
 
+
+/* ── FUND MODAL ── */
+#fund-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,.75);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+#fund-modal.open { display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; }
+#fund-modal-inner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header h2 { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.4; }
+.modal-close {
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; font-size: 18px; flex-shrink: 0;
+}
+.modal-close:hover { background: var(--border); color: var(--text); }
+.modal-body { padding: 20px 24px 24px; }
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 600px) { .modal-grid { grid-template-columns: 1fr; } }
+.modal-section {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.modal-section-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text3);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.modal-kv { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.modal-kv:last-child { border-bottom: none; }
+.modal-kv .k { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+.modal-kv .v { font-size: 11px; color: var(--text); text-align: right; font-weight: 500; }
+.modal-chart-wrap { margin-top: 20px; }
+.modal-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 600px) { .modal-chart-row { grid-template-columns: 1fr; } }
+.modal-chart-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.modal-chart-box.full { grid-column: 1 / -1; }
+.aging-bar-wrap { margin-top: 8px; }
+.aging-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.aging-label { font-size: 10px; color: var(--text3); width: 36px; flex-shrink: 0; }
+.aging-bar-bg { flex: 1; height: 12px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.aging-bar-fill { height: 100%; border-radius: 3px; background: var(--red); transition: width .3s; }
+.aging-val { font-size: 10px; color: var(--text2); width: 70px; text-align: right; flex-shrink: 0; }
+.cota-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+.cota-row:last-child { border-bottom: none; }
+.cota-serie { color: var(--text2); flex: 1; font-size: 10px; }
+.cota-qt { color: var(--text3); font-size: 10px; flex-shrink: 0; }
+.cota-vl { color: var(--cyan); font-weight: 500; flex-shrink: 0; }
+.cota-rm { font-size: 10px; color: var(--green); flex-shrink: 0; }
+.alert-box {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+.alert-box:last-child { margin-bottom: 0; }
+.alert-warn { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); color: var(--yellow); }
+.alert-danger { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25); color: var(--red); }
+.alert-ok { background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.25); color: var(--green); }
+.alert-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+.modal-no-data { color: var(--text3); font-size: 11px; text-align: center; padding: 16px 0; }
+
 </style>
 </head>
 <body>
@@ -675,7 +771,7 @@ body {
   <div class="header-pills">
     <span class="header-pill pill-orange">R$ 831B AUM</span>
     <span class="header-pill pill-cyan">3.552 Fundos</span>
-    <span class="header-pill pill-text3">Fev/2026</span>
+    <span class="header-pill pill-text3">Fev/2026 (dados CVM)</span>
   </div>
 </div>
 
@@ -722,9 +818,18 @@ const FIDCS = FIDCS_RAW.map(d => ({
   condom: d.co || '',
   dt_reg: d.dr || '',
   dt_cancel: d.dc || '',
+  dt_ini_ativ: d.di || '',
   segmentos: d.sg || {},
   segmento_principal: d.sp || 'outros'
 }));
+
+// Helper: check if a name is a valid entity name (not empty, not placeholder)
+function isValidEntityName(name) {
+  if (!name) return false;
+  const trimmed = name.trim();
+  if (trimmed === '' || trimmed === '-' || trimmed === '--' || trimmed === 'N/A' || trimmed === 'NA' || trimmed === 'SEM GESTORA') return false;
+  return true;
+}
 
 // Segment colors
 const SEG_COLORS = {
@@ -853,18 +958,34 @@ function buildEntityMap(field) {
   const m = {};
   FIDCS.forEach(d => {
     const key = d[field];
-    if (!key) return;
-    if (!m[key]) m[key] = { name: key, pl: 0, inad: 0, count: 0, funds: [] };
-    m[key].pl += d.pl;
-    m[key].inad += d.inadimplencia;
-    m[key].count++;
-    m[key].funds.push(d);
+    if (!isValidEntityName(key)) return;
+    const trimmed = key.trim();
+    if (!m[trimmed]) m[trimmed] = { name: trimmed, pl: 0, inad: 0, count: 0, funds: [] };
+    m[trimmed].pl += d.pl;
+    m[trimmed].inad += d.inadimplencia;
+    m[trimmed].count++;
+    m[trimmed].funds.push(d);
   });
   return Object.values(m);
 }
 
+// Build aggregate for funds with invalid/missing entity name
+function buildEntityInvalid(field) {
+  let count = 0, pl = 0;
+  FIDCS.forEach(d => {
+    const key = d[field];
+    if (!isValidEntityName(key)) {
+      count++;
+      pl += d.pl;
+    }
+  });
+  return { count, pl };
+}
+
 const ADMINS_DATA = buildEntityMap('admin');
 const GESTORAS_DATA = buildEntityMap('gestor');
+const GESTORAS_SEM_NOME = buildEntityInvalid('gestor');
+const ADMINS_SEM_NOME = buildEntityInvalid('admin');
 
 // Segment aggregates
 const SEG_AGG = {};
@@ -1047,8 +1168,7 @@ function renderBubbleChart() {
       tooltip.classList.remove('visible');
     })
     .on('click', function(event, d) {
-      state.selectedFund = d;
-      renderOverviewPanel();
+      openFundModal(d);
     });
 
   // Labels for larger bubbles
@@ -1122,6 +1242,7 @@ function renderOverviewPanel() {
           <div class="detail-row"><span class="detail-key">Público-alvo</span><span class="detail-val">${d.publico_alvo || '—'}</span></div>
           <div class="detail-row"><span class="detail-key">Taxa Adm.</span><span class="detail-val">${d.taxa_adm || '—'}</span></div>
           <div class="detail-row"><span class="detail-key">Taxa Perf.</span><span class="detail-val">${d.taxa_perfm || '—'}</span></div>
+          <div class="detail-row"><span class="detail-key">Início operação</span><span class="detail-val">${d.dt_ini_ativ ? fmtDate(d.dt_ini_ativ) : '—'}</span></div>
           <div class="detail-row"><span class="detail-key">Registro</span><span class="detail-val">${fmtDate(d.dt_reg)}</span></div>
         </div>
         <button onclick="state.selectedFund=null;renderOverviewPanel()" style="width:100%;padding:8px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text3);font-size:11px;cursor:pointer;">← Voltar</button>
@@ -1146,7 +1267,7 @@ function renderOverviewPanel() {
         </div>
         <div class="stat-card">
           <div class="stat-value" style="color:var(--text)">${GESTORAS_DATA.length}</div>
-          <div class="stat-label">Gestoras</div>
+          <div class="stat-label">Gestoras Identificadas</div>
         </div>
       </div>
     </div>
@@ -1336,9 +1457,7 @@ function renderTableRows() {
   rowsDiv.querySelectorAll('.table-row').forEach(row => {
     row.addEventListener('click', () => {
       const idx = parseInt(row.dataset.idx);
-      state.selectedFund = funds[idx];
-      renderTableRows();
-      renderFundosPanel();
+      openFundModal(funds[idx]);
     });
   });
 }
@@ -1407,6 +1526,7 @@ function renderFundosPanel() {
           <div class="detail-row"><span class="detail-key">Fundo Exclusivo</span><span class="detail-val">${d.fundo_exclusivo || '—'}</span></div>
           <div class="detail-row"><span class="detail-key">Taxa Adm.</span><span class="detail-val">${d.taxa_adm || '—'}</span></div>
           <div class="detail-row"><span class="detail-key">Taxa Perf.</span><span class="detail-val">${d.taxa_perfm || '—'}</span></div>
+          <div class="detail-row"><span class="detail-key">Início operação</span><span class="detail-val">${d.dt_ini_ativ ? fmtDate(d.dt_ini_ativ) : '—'}</span></div>
           <div class="detail-row"><span class="detail-key">Registro</span><span class="detail-val">${fmtDate(d.dt_reg)}</span></div>
           ${d.dt_cancel ? `<div class="detail-row"><span class="detail-key">Cancelamento</span><span class="detail-val">${fmtDate(d.dt_cancel)}</span></div>` : ''}
         </div>
@@ -1530,6 +1650,8 @@ function renderEntitiesChart() {
   grad.append('stop').attr('offset','100%').attr('stop-color','var(--cyan)');
 
   // Title
+  const semNomeChart = isGestoras ? GESTORAS_SEM_NOME : ADMINS_SEM_NOME;
+  const titleNote = semNomeChart.count > 0 ? ` · ${semNomeChart.count.toLocaleString('pt-BR')} s/ nome excluídos` : '';
   svg.append('text')
     .attr('x', margin.left)
     .attr('y', 18)
@@ -1539,7 +1661,7 @@ function renderEntitiesChart() {
     .attr('font-weight', 600)
     .attr('text-transform', 'uppercase')
     .attr('letter-spacing', 1)
-    .text(`TOP 25 ${isGestoras ? 'GESTORAS' : 'ADMINISTRADORAS'} — POR ${sortBy === 'pl' ? 'PL' : 'QUANTIDADE'}`);
+    .text(`TOP 25 ${isGestoras ? 'GESTORAS' : 'ADMINISTRADORAS'} — POR ${sortBy === 'pl' ? 'PL' : 'QUANTIDADE'}${titleNote}`);
 
   sorted.forEach((d, i) => {
     const y = i * (barH + 4);
@@ -1628,6 +1750,8 @@ function renderEntitiesPanel() {
   const sorted = [...data].sort((a,b) => sortBy === 'pl' ? b.pl - a.pl : b.count - a.count);
   const maxPL = sorted[0]?.pl || 1;
 
+  const semNome = isGestoras ? GESTORAS_SEM_NOME : ADMINS_SEM_NOME;
+
   let html = `
     <div class="panel-section">
       <div class="section-header">${isGestoras ? 'Gestoras' : 'Administradoras'}</div>
@@ -1635,6 +1759,12 @@ function renderEntitiesPanel() {
         <button class="toggle-btn${sortBy === 'pl' ? ' active' : ''}" id="sort-pl">Por PL</button>
         <button class="toggle-btn${sortBy === 'count' ? ' active' : ''}" id="sort-count">Por Quantidade</button>
       </div>
+      ${semNome.count > 0 ? `
+      <div style="background:rgba(90,106,138,.1);border:1px solid rgba(90,106,138,.25);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:var(--text3);line-height:1.5">
+        <i data-lucide="info" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:4px"></i>
+        <strong style="color:var(--text2)">${semNome.count.toLocaleString('pt-BR')} fundos</strong> sem ${isGestoras ? 'gestora' : 'administradora'} identificada
+        ${semNome.pl > 0 ? `<span style="display:block;margin-top:2px;color:var(--text3)">PL: ${fmtBRL(semNome.pl)}</span>` : ''}
+      </div>` : ''}
       <div class="rank-list">
         ${sorted.slice(0, 20).map((d,i) => `
           <div class="rank-item${state.selectedEntity && state.selectedEntity.name === d.name ? ' selected' : ''}" onclick="selectEntity_${isGestoras ? 'g' : 'a'}(${i})">
@@ -1900,7 +2030,182 @@ function renderMercadoPanel() {
 
 window.addEventListener('load', () => {
   lucide.createIcons();
-  renderMode('overview');
+  
+// FUND DETAIL DATA (lazy loaded)
+var DETAIL_DATA = null;
+var DETAIL_LOADING = false;
+var DETAIL_CALLBACKS = [];
+
+function loadDetailData(cb) {
+  if (DETAIL_DATA) { cb(DETAIL_DATA); return; }
+  DETAIL_CALLBACKS.push(cb);
+  if (DETAIL_LOADING) return;
+  DETAIL_LOADING = true;
+  fetch('fidcs_detail.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      DETAIL_DATA = d;
+      DETAIL_CALLBACKS.forEach(function(fn) { fn(d); });
+      DETAIL_CALLBACKS = [];
+    })
+    .catch(function() {
+      DETAIL_CALLBACKS.forEach(function(fn) { fn({}); });
+      DETAIL_CALLBACKS = [];
+    });
+}
+
+function openFundModal(d) {
+  document.getElementById('modal-fund-name').textContent = d.nome;
+  document.getElementById('fund-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('modal-body').innerHTML = '<div class="modal-no-data" style="padding:40px">Carregando dados...</div>';
+  loadDetailData(function(detail) { renderModalBody(d, detail[d.cnpj] || {}); });
+}
+
+function closeFundModal() {
+  document.getElementById('fund-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modal-close-btn').addEventListener('click', closeFundModal);
+document.getElementById('fund-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeFundModal();
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeFundModal(); });
+
+function renderModalBody(d, det) {
+  var inadPct = d.pl > 0 ? (d.inadimplencia / d.pl * 100) : 0;
+  var alavPct = d.pl > 0 && d.ativo_total > d.pl ? ((d.ativo_total / d.pl - 1) * 100) : 0;
+
+  var alerts = buildModalAlerts(d, det, inadPct, alavPct);
+  var alertsHtml = alerts.length
+    ? alerts.map(function(a) { return '<div class="alert-box alert-' + a.level + '"><span class="alert-icon">' + a.icon + '</span><span>' + a.msg + '</span></div>'; }).join('')
+    : '<div class="alert-box alert-ok"><span class="alert-icon">ok</span><span>Nenhum alerta - metricas dentro do esperado.</span></div>';
+
+  var cotasHtml = buildCotasHtml(det.cotas || [], det.rentab || []);
+  var agingHtml = buildAgingHtml(det.aging || null, d.inadimplencia);
+  var segsHtml = buildSegsHtml(d.segmentos || {});
+
+  var dtIni = d.dt_ini_ativ ? '<div class="modal-kv"><span class="k">Inicio</span><span class="v">' + fmtDate(d.dt_ini_ativ) + '</span></div>' : '';
+  var dtCan = d.dt_cancel ? '<div class="modal-kv"><span class="k">Cancelamento</span><span class="v">' + fmtDate(d.dt_cancel) + '</span></div>' : '';
+  var alavStr = alavPct > 0 ? alavPct.toFixed(1).replace('.',',') + '%' : '-';
+
+  document.getElementById('modal-body').innerHTML =
+    '<div style="margin-bottom:16px">' + alertsHtml + '</div>' +
+    '<div class="modal-grid">' +
+      '<div class="modal-section">' +
+        '<div class="modal-section-title">Identificacao</div>' +
+        '<div class="modal-kv"><span class="k">CNPJ</span><span class="v">' + d.cnpj + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Situacao</span><span class="v">' + situacaoBadge(d.situacao) + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Condominio</span><span class="v">' + condBadge(d.condom) + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Publico-alvo</span><span class="v">' + (d.publico_alvo || '-') + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Segmento</span><span class="v" style="color:' + (SEG_COLORS[d.segmento_principal] || 'inherit') + '">' + (SEG_LABELS[d.segmento_principal] || '-') + '</span></div>' +
+        dtIni + dtCan +
+      '</div>' +
+      '<div class="modal-section">' +
+        '<div class="modal-section-title">Financeiro</div>' +
+        '<div class="modal-kv"><span class="k">PL Atual</span><span class="v" style="color:var(--ng-orange)">' + fmtBRL(d.pl) + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Ativo Total</span><span class="v">' + fmtBRL(d.ativo_total) + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Inadimplencia</span><span class="v" style="color:var(--red)">' + fmtBRL(d.inadimplencia) + ' (' + inadPct.toFixed(2).replace('.',',') + '%)</span></div>' +
+        '<div class="modal-kv"><span class="k">Alavancagem</span><span class="v">' + alavStr + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Taxa Adm.</span><span class="v">' + (d.taxa_adm || '-') + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Taxa Perf.</span><span class="v">' + (d.taxa_perfm || '-') + '</span></div>' +
+      '</div>' +
+      '<div class="modal-section">' +
+        '<div class="modal-section-title">Prestadores</div>' +
+        '<div class="modal-kv"><span class="k">Administrador</span><span class="v">' + (d.admin || '-') + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Gestor</span><span class="v">' + (d.gestor || '-') + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Auditor</span><span class="v">' + (d.auditor || '-') + '</span></div>' +
+        '<div class="modal-kv"><span class="k">Custodiante</span><span class="v">' + (d.custodiante || '-') + '</span></div>' +
+      '</div>' +
+      '<div class="modal-section">' +
+        '<div class="modal-section-title">Carteira por Segmento</div>' +
+        segsHtml +
+      '</div>' +
+    '</div>' +
+    '<div class="modal-chart-row">' +
+      '<div class="modal-chart-box">' +
+        '<div class="modal-section-title">Inadimplencia por Aging (Fev/2026)</div>' +
+        agingHtml +
+      '</div>' +
+      '<div class="modal-chart-box">' +
+        '<div class="modal-section-title">Estrutura de Cotas (Fev/2026)</div>' +
+        cotasHtml +
+      '</div>' +
+    '</div>';
+
+  lucide.createIcons();
+}
+
+function buildModalAlerts(d, det, inadPct, alavPct) {
+  var alerts = [];
+  if (inadPct > 10) {
+    alerts.push({ level: 'danger', icon: '!', msg: 'Inadimplencia critica: ' + inadPct.toFixed(1).replace('.',',') + '% do PL (acima de 10%)' });
+  } else if (inadPct > 5) {
+    alerts.push({ level: 'warn', icon: '!', msg: 'Inadimplencia elevada: ' + inadPct.toFixed(1).replace('.',',') + '% do PL (acima de 5%)' });
+  }
+  if (alavPct > 30) {
+    alerts.push({ level: 'warn', icon: '!', msg: 'Alavancagem elevada: ' + alavPct.toFixed(1).replace('.',',') + '% acima do PL' });
+  }
+  if (d.situacao === 'CANCELADA') {
+    alerts.push({ level: 'danger', icon: 'x', msg: 'Fundo cancelado - nao esta em operacao' });
+  } else if (d.situacao !== 'EM FUNCIONAMENTO NORMAL') {
+    alerts.push({ level: 'warn', icon: '!', msg: 'Situacao irregular: ' + d.situacao });
+  }
+  if (det.cotas && det.cotas.length > 1) {
+    var total = det.cotas.reduce(function(s,c) { return s + c.qt * c.vl; }, 0);
+    var sub = det.cotas.filter(function(c) { return /sub/i.test(c.serie); }).reduce(function(s,c) { return s + c.qt * c.vl; }, 0);
+    if (total > 0 && sub / total < 0.10) {
+      alerts.push({ level: 'warn', icon: '!', msg: 'Subordinacao baixa: ' + (sub/total*100).toFixed(1).replace('.',',') + '% do patrimonio' });
+    }
+  }
+  return alerts;
+}
+
+function buildAgingHtml(aging, totalInad) {
+  if (!aging || totalInad <= 0) return '<div class="modal-no-data">Sem dados de aging disponiveis</div>';
+  var buckets = [
+    { label: 'D+30', val: aging.d30 },
+    { label: 'D+60', val: aging.d60 },
+    { label: 'D+90', val: aging.d90 },
+    { label: 'D+120', val: aging.d120 },
+    { label: 'D+180', val: aging.d180 }
+  ].filter(function(b) { return b.val > 0; });
+  if (!buckets.length) return '<div class="modal-no-data">Sem inadimplencia registrada</div>';
+  var max = Math.max.apply(null, buckets.map(function(b) { return b.val; }));
+  return '<div class="aging-bar-wrap">' + buckets.map(function(b) {
+    var pct = (b.val / max * 100).toFixed(1);
+    return '<div class="aging-row"><span class="aging-label">' + b.label + '</span><div class="aging-bar-bg"><div class="aging-bar-fill" style="width:' + pct + '%"></div></div><span class="aging-val">' + fmtBRL(b.val) + '</span></div>';
+  }).join('') + '</div>';
+}
+
+function buildCotasHtml(cotas, rentab) {
+  if (!cotas.length) return '<div class="modal-no-data">Sem dados de cotas disponiveis</div>';
+  var rmMap = {};
+  rentab.forEach(function(r) { rmMap[r.serie] = r.rm; });
+  var total = cotas.reduce(function(s,c) { return s + c.qt * c.vl; }, 0);
+  return cotas.map(function(c) {
+    var pl = c.qt * c.vl;
+    var pct = total > 0 ? (pl / total * 100).toFixed(1) : 0;
+    var rm = rmMap[c.serie];
+    var serieName = c.serie.replace(/subclasse /gi,'').replace(/subordinada/gi,'Sub').replace(/senior/gi,'Senior').replace(/mezanino/gi,'Mez').replace(/serie/gi,'S').replace(/[|]$/,'').trim();
+    var rmStr = rm !== undefined ? '<span class="cota-rm">+' + rm.toFixed(2).replace('.',',') + '%/m</span>' : '';
+    return '<div class="cota-row"><span class="cota-serie">' + serieName + '</span><span class="cota-qt">' + pct + '%</span><span class="cota-vl">' + fmtBRL(pl) + '</span>' + rmStr + '</div>';
+  }).join('');
+}
+
+function buildSegsHtml(segs) {
+  var entries = Object.entries(segs).filter(function(e) { return e[1] > 0; }).sort(function(a,b) { return b[1]-a[1]; });
+  if (!entries.length) return '<div class="modal-no-data">Sem segmentacao disponivel</div>';
+  var total = entries.reduce(function(s,e) { return s + e[1]; }, 0);
+  return entries.map(function(e) {
+    var pct = (e[1]/total*100).toFixed(1);
+    return '<div class="modal-kv"><span class="k" style="color:' + (SEG_COLORS[e[0]] || 'inherit') + '">' + (SEG_LABELS[e[0]] || e[0]) + '</span><span class="v">' + fmtBRL(e[1]) + ' (' + pct + '%)</span></div>';
+  }).join('');
+}
+
+
+renderMode('overview');
   document.getElementById('loading').style.display = 'none';
 });
 
@@ -1909,5 +2214,17 @@ window.addEventListener('resize', () => {
   renderMode(state.mode);
 });
 </script>
+
+<!-- FUND DETAIL MODAL -->
+<div id="fund-modal">
+  <div id="fund-modal-inner">
+    <div class="modal-header">
+      <h2 id="modal-fund-name">-</h2>
+      <button class="modal-close" id="modal-close-btn">x</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
 </body>
 </html>
