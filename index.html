@@ -764,6 +764,7 @@ body {
     <button class="mode-tab" data-mode="gestoras">Gestoras</button>
     <button class="mode-tab" data-mode="admins">Administradoras</button>
     <button class="mode-tab" data-mode="mercado">Mercado</button>
+    <button class="mode-tab" data-mode="pesquisa">🔍 Pesquisa</button>
   </div>
 
   <div class="header-spacer"></div>
@@ -960,6 +961,242 @@ document.querySelectorAll('.mode-tab').forEach(btn => {
 // RENDER DISPATCH
 // ══════════════════════════════════════════════════════════════
 
+
+// ═══════════════════════════════════════════
+// PESQUISA DASHBOARD
+// ═══════════════════════════════════════════
+const searchState = {
+  nome: '',
+  segmento: '',
+  condom: '',
+  situacao: 'EM FUNCIONAMENTO NORMAL',
+  gestora: '',
+  admin: '',
+  plMin: '',
+  plMax: '',
+  inadMin: '',
+  inadMax: '',
+  publico: '',
+  sortCol: 'pl',
+  sortDir: -1,
+  results: null,
+};
+
+function fmtBRL2(v) {
+  if (!v || v === 0) return 'R$ 0';
+  if (v >= 1e9) return 'R$ ' + (v/1e9).toFixed(1) + 'B';
+  if (v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return 'R$ ' + (v/1e3).toFixed(0) + 'K';
+  return 'R$ ' + v.toFixed(0);
+}
+
+function runSearch() {
+  let r = FIDCS;
+  const s = searchState;
+  if (s.nome) {
+    const q = s.nome.toLowerCase();
+    r = r.filter(d => (d.n||'').toLowerCase().includes(q) || (d.c||'').includes(q));
+  }
+  if (s.segmento) r = r.filter(d => (d.sp||'') === s.segmento);
+  if (s.condom) r = r.filter(d => (d.co||'').toUpperCase() === s.condom.toUpperCase());
+  if (s.situacao) r = r.filter(d => (d.s||'') === s.situacao);
+  if (s.gestora) {
+    const q = s.gestora.toLowerCase();
+    r = r.filter(d => (d.g||'').toLowerCase().includes(q));
+  }
+  if (s.admin) {
+    const q = s.admin.toLowerCase();
+    r = r.filter(d => (d.ad||'').toLowerCase().includes(q));
+  }
+  if (s.publico) r = r.filter(d => (d.pa||'') === s.publico);
+  const plMin = parseFloat(s.plMin) * 1e6;
+  const plMax = parseFloat(s.plMax) * 1e6;
+  if (!isNaN(plMin) && s.plMin !== '') r = r.filter(d => d.pl >= plMin);
+  if (!isNaN(plMax) && s.plMax !== '') r = r.filter(d => d.pl <= plMax);
+  const inMin = parseFloat(s.inadMin);
+  const inMax = parseFloat(s.inadMax);
+  if (!isNaN(inMin) && s.inadMin !== '') r = r.filter(d => d.in >= inMin);
+  if (!isNaN(inMax) && s.inadMax !== '') r = r.filter(d => d.in <= inMax);
+  r = [...r].sort((a, b) => {
+    const key = s.sortCol === 'pl' ? 'pl' : s.sortCol === 'inad' ? 'in' : s.sortCol;
+    let va = a[key], vb = b[key];
+    if (typeof va === 'string') va = va || '';
+    if (typeof vb === 'string') vb = vb || '';
+    return s.sortDir * (va < vb ? -1 : va > vb ? 1 : 0);
+  });
+  searchState.results = r;
+  return r;
+}
+
+function buildPesquisaHTML(s) {
+  const segOpts = Object.entries(SEG_LABELS)
+    .filter(([k]) => k && k !== '')
+    .map(([k,v]) => `<option value="${k}" ${s.segmento===k?'selected':''}>${v}</option>`)
+    .join('');
+  return `
+    <div style="margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700;color:var(--text1);margin-bottom:4px">Pesquisa Avançada</div>
+      <div style="font-size:13px;color:var(--text2)">Filtre e encontre FIDCs por múltiplos critérios</div>
+    </div>
+    <div class="filter-grid">
+      <div class="filter-group" style="grid-column:span 2">
+        <label class="filter-label">Nome / CNPJ</label>
+        <input class="filter-input" id="pq-nome" type="text" placeholder="Buscar por nome ou CNPJ..." value="${s.nome}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Segmento</label>
+        <select class="filter-select" id="pq-seg">
+          <option value="">Todos</option>${segOpts}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Condomínio</label>
+        <select class="filter-select" id="pq-condom">
+          <option value="">Todos</option>
+          <option value="ABERTO" ${s.condom==='ABERTO'?'selected':''}>Aberto</option>
+          <option value="FECHADO" ${s.condom==='FECHADO'?'selected':''}>Fechado</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Situação</label>
+        <select class="filter-select" id="pq-sit">
+          <option value="">Todas</option>
+          <option value="EM FUNCIONAMENTO NORMAL" ${s.situacao==='EM FUNCIONAMENTO NORMAL'?'selected':''}>Ativo</option>
+          <option value="CANCELADA" ${s.situacao==='CANCELADA'?'selected':''}>Cancelado</option>
+          <option value="LIQUIDAÇÃO" ${s.situacao==='LIQUIDAÇÃO'?'selected':''}>Liquidação</option>
+          <option value="FASE PRÉ-OPERACIONAL" ${s.situacao==='FASE PRÉ-OPERACIONAL'?'selected':''}>Pré-operacional</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Público Alvo</label>
+        <select class="filter-select" id="pq-pub">
+          <option value="">Todos</option>
+          <option value="Qualificado" ${s.publico==='Qualificado'?'selected':''}>Qualificado</option>
+          <option value="Profissional" ${s.publico==='Profissional'?'selected':''}>Profissional</option>
+          <option value="Geral" ${s.publico==='Geral'?'selected':''}>Geral</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Gestora</label>
+        <input class="filter-input" id="pq-gest" type="text" placeholder="Nome da gestora..." value="${s.gestora}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Administradora</label>
+        <input class="filter-input" id="pq-adm" type="text" placeholder="Nome da admin..." value="${s.admin}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">PL Mínimo (R$ Mi)</label>
+        <input class="filter-input" id="pq-pl-min" type="number" placeholder="Ex: 10" value="${s.plMin}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">PL Máximo (R$ Mi)</label>
+        <input class="filter-input" id="pq-pl-max" type="number" placeholder="Ex: 500" value="${s.plMax}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Inadimplência Mín (R$)</label>
+        <input class="filter-input" id="pq-in-min" type="number" placeholder="Ex: 100000" value="${s.inadMin}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Inadimplência Máx (R$)</label>
+        <input class="filter-input" id="pq-in-max" type="number" placeholder="Ex: 1000000" value="${s.inadMax}">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      <button class="btn-search" id="pq-run">🔍 Pesquisar</button>
+      <button class="btn-clear" id="pq-clear">Limpar filtros</button>
+    </div>
+    <div id="pq-results"></div>
+  `;
+}
+
+function renderPesquisa() {
+  const main = document.getElementById('main-area');
+  Array.from(main.children).forEach(el => {
+    if (!el.classList.contains('fonte-note')) el.remove();
+  });
+  const div = document.createElement('div');
+  div.className = 'pesquisa-container';
+  div.innerHTML = buildPesquisaHTML(searchState);
+  main.insertBefore(div, main.lastElementChild);
+
+  div.querySelector('#pq-run').addEventListener('click', execSearch);
+  div.querySelector('#pq-clear').addEventListener('click', () => {
+    Object.assign(searchState, {nome:'',segmento:'',condom:'',situacao:'EM FUNCIONAMENTO NORMAL',gestora:'',admin:'',plMin:'',plMax:'',inadMin:'',inadMax:'',publico:'',results:null});
+    renderPesquisa();
+  });
+  div.querySelectorAll('.filter-input,.filter-select').forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key==='Enter') execSearch(); });
+  });
+  if (searchState.results !== null) renderPesquisaResults(searchState.results, div.querySelector('#pq-results'));
+}
+
+function execSearch() {
+  const div = document.querySelector('.pesquisa-container');
+  if (!div) return;
+  searchState.nome = div.querySelector('#pq-nome').value.trim();
+  searchState.segmento = div.querySelector('#pq-seg').value;
+  searchState.condom = div.querySelector('#pq-condom').value;
+  searchState.situacao = div.querySelector('#pq-sit').value;
+  searchState.publico = div.querySelector('#pq-pub').value;
+  searchState.gestora = div.querySelector('#pq-gest').value.trim();
+  searchState.admin = div.querySelector('#pq-adm').value.trim();
+  searchState.plMin = div.querySelector('#pq-pl-min').value;
+  searchState.plMax = div.querySelector('#pq-pl-max').value;
+  searchState.inadMin = div.querySelector('#pq-in-min').value;
+  searchState.inadMax = div.querySelector('#pq-in-max').value;
+  const results = runSearch();
+  renderPesquisaResults(results, div.querySelector('#pq-results'));
+}
+
+function renderPesquisaResults(results, container) {
+  if (!results) return;
+  const s = searchState;
+  const chips = [];
+  if (s.nome) chips.push(['Nome', s.nome, () => { searchState.nome=''; execSearch(); }]);
+  if (s.segmento) chips.push(['Segmento', SEG_LABELS[s.segmento]||s.segmento, () => { searchState.segmento=''; execSearch(); }]);
+  if (s.condom) chips.push(['Condomínio', s.condom, () => { searchState.condom=''; execSearch(); }]);
+  if (s.situacao) chips.push(['Situação', s.situacao==='EM FUNCIONAMENTO NORMAL'?'Ativo':s.situacao, () => { searchState.situacao=''; execSearch(); }]);
+  if (s.gestora) chips.push(['Gestora', s.gestora, () => { searchState.gestora=''; execSearch(); }]);
+  if (s.admin) chips.push(['Admin', s.admin, () => { searchState.admin=''; execSearch(); }]);
+  if (s.plMin) chips.push(['PL ≥', 'R$ '+s.plMin+'M', () => { searchState.plMin=''; execSearch(); }]);
+  if (s.plMax) chips.push(['PL ≤', 'R$ '+s.plMax+'M', () => { searchState.plMax=''; execSearch(); }]);
+  if (s.inadMin) chips.push(['Inad ≥', fmtBRL2(parseFloat(s.inadMin)), () => { searchState.inadMin=''; execSearch(); }]);
+  if (s.inadMax) chips.push(['Inad ≤', fmtBRL2(parseFloat(s.inadMax)), () => { searchState.inadMax=''; execSearch(); }]);
+  if (s.publico) chips.push(['Público', s.publico, () => { searchState.publico=''; execSearch(); }]);
+
+  const shown = results.slice(0, 500);
+  const rows = shown.map(d => {
+    const sc = SEG_COLORS[d.sp]||'#5a6a8a';
+    const sl = SEG_LABELS[d.sp||'']||'Outros';
+    const nm = d.n.length>45 ? d.n.slice(0,45)+'…' : d.n;
+    const g = d.g ? (d.g.length>25?d.g.slice(0,25)+'…':d.g) : '<span style="color:var(--text3)">—</span>';
+    const ad = d.ad ? (d.ad.length>25?d.ad.slice(0,25)+'…':d.ad) : '—';
+    const plStr = d.pl>0 ? fmtBRL2(d.pl) : '<span style="color:var(--text3)">—</span>';
+    const inStr = d.in>0 ? fmtBRL2(d.in) : '<span style="color:var(--text3)">—</span>';
+    return `<tr data-cnpj="${d.c}"><td class="col-nome" title="${d.n}">${nm}</td><td style="font-size:11px;color:var(--text2)">${d.c}</td><td><span style="background:${sc}22;color:${sc};border:1px solid ${sc}44;border-radius:4px;padding:2px 7px;font-size:11px">${sl}</span></td><td>${condBadge(d.co)}</td><td>${situacaoBadge(d.s)}</td><td class="col-pl">${plStr}</td><td class="col-inad">${inStr}</td><td style="color:var(--text2);font-size:12px">${g}</td><td style="color:var(--text2);font-size:12px">${ad}</td></tr>`;
+  }).join('');
+
+  const chipHtml = chips.length ? '<div class="chip-row">'+chips.map((ch,i)=>`<span class="chip">${ch[0]}: <strong>${ch[1]}</strong><button data-ci="${i}">×</button></span>`).join('')+'</div>' : '';
+  const tableHtml = shown.length===0 ? '<div class="pesquisa-empty">Nenhum fundo encontrado com esses critérios</div>' : `<div class="pesquisa-table-wrap"><table class="pesquisa-table"><thead><tr><th>Nome</th><th>CNPJ</th><th>Segmento</th><th>Cond.</th><th>Situação</th><th>PL</th><th>Inadimplência</th><th>Gestora</th><th>Admin</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+
+  container.innerHTML = `${chipHtml}<div class="pesquisa-results"><div class="pesquisa-results-header"><div class="pesquisa-count"><strong>${results.length.toLocaleString('pt-BR')}</strong> fundos encontrados${results.length>500?' <span style="color:var(--accent)">(mostrando 500)</span>':''}</div><div class="pesquisa-sort">Ordenar por:<select id="pq-sort-col"><option value="pl" ${s.sortCol==='pl'?'selected':''}>PL</option><option value="n" ${s.sortCol==='n'?'selected':''}>Nome</option><option value="inad" ${s.sortCol==='inad'?'selected':''}>Inadimplência</option><option value="s" ${s.sortCol==='s'?'selected':''}>Situação</option></select><button id="pq-sort-dir" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px">${s.sortDir===-1?'↓':'↑'}</button></div></div>${tableHtml}</div>`;
+
+  chips.forEach((ch,i) => {
+    const btn = container.querySelector('[data-ci="'+i+'"]');
+    if (btn) btn.addEventListener('click', e => { e.stopPropagation(); ch[2](); });
+  });
+  const scEl = container.querySelector('#pq-sort-col');
+  const sdEl = container.querySelector('#pq-sort-dir');
+  if (scEl) scEl.addEventListener('change', () => { searchState.sortCol=scEl.value; renderPesquisaResults(runSearch(),container); });
+  if (sdEl) sdEl.addEventListener('click', () => { searchState.sortDir*=-1; renderPesquisaResults(runSearch(),container); });
+  container.querySelectorAll('tr[data-cnpj]').forEach(row => {
+    row.addEventListener('click', () => {
+      const fund = FIDCS.find(d => d.c===row.dataset.cnpj);
+      if (fund) openFundModal(fund);
+    });
+  });
+}
+
 function renderMode(mode) {
   clearMain();
   switch (mode) {
@@ -968,6 +1205,7 @@ function renderMode(mode) {
     case 'gestoras': state.entityMode = 'gestoras'; renderEntities(); break;
     case 'admins': state.entityMode = 'admins'; renderEntities(); break;
     case 'mercado': renderMercado(); break;
+    case 'pesquisa': renderPesquisa(); break;
   }
 }
 
