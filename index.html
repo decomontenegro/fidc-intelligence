@@ -2173,7 +2173,8 @@ function renderMercadoPanel() {
 
 window.addEventListener('load', () => {
   lucide.createIcons();
-  
+});
+
 // FUND DETAIL DATA (lazy loaded)
 var DETAIL_DATA = null;
 var DETAIL_LOADING = false;
@@ -2444,8 +2445,7 @@ function buildSegsHtml(segs) {
 
 
 renderMode('overview');
-  document.getElementById('loading').style.display = 'none';
-});
+document.getElementById('loading').style.display = 'none';
 
 // Handle resize (debounced — avoid re-render on minor viewport shifts)
 let _resizeTimer;
