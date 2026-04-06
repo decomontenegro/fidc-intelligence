@@ -863,6 +863,13 @@ const TOTAL_PL = WITH_PL.reduce((s,d) => s + d.pl, 0);
 const TOTAL_INAD = FIDCS.reduce((s,d) => s + d.inadimplencia, 0);
 const TOTAL_ATIVOS = FIDCS.filter(d => d.situacao === 'EM FUNCIONAMENTO NORMAL').length;
 
+function isValidEntityName(name) {
+  if (!name) return false;
+  const trimmed = name.trim();
+  if (trimmed === '' || trimmed === '-' || trimmed === '--' || trimmed === 'N/A' || trimmed === 'NA' || trimmed === 'SEM GESTORA') return false;
+  return true;
+}
+
 // Admin aggregates
 function buildEntityMap(field) {
   const m = {};
