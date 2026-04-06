@@ -798,7 +798,52 @@ const FIDCS_RAW = [{"c":"14.076.720/0001-45","n":"FUNDO DE INVESTIMENTO EM DIREI
 // DATA PROCESSING (FIDCS already enriched in FIDCS_RAW)
 // ══════════════════════════════════════════════════════════════
 
-const FIDCS = FIDCS_RAW;
+const FIDCS = FIDCS_RAW.map(d => ({
+  // shorthand aliases (for Pesquisa module compatibility)
+  c: d.c || '',
+  n: d.n || '',
+  s: d.s || '',
+  at: d.at || 0,
+  in: d.in || 0,
+  ad: d.ad || '',
+  g: d.g || '',
+  au: d.au || '',
+  cu: d.cu || '',
+  cl: d.cl || '',
+  ca: d.ca || '',
+  ta: d.ta || '',
+  tp: d.tp || '',
+  pa: d.pa || '',
+  fc: d.fc || '',
+  fe: d.fe || '',
+  co: d.co || '',
+  dr: d.dr || '',
+  dc: d.dc || '',
+  sg: d.sg || {},
+  sp: d.sp || 'outros',
+  cnpj: d.c || '',
+  nome: d.n || '',
+  situacao: d.s || '',
+  pl: d.pl || 0,
+  ativo_total: d.at || 0,
+  inadimplencia: d.in || 0,
+  admin: d.ad || '',
+  gestor: d.g || '',
+  auditor: d.au || '',
+  custodiante: d.cu || '',
+  classe: d.cl || '',
+  classe_anbima: d.ca || '',
+  taxa_adm: d.ta || '',
+  taxa_perfm: d.tp || '',
+  publico_alvo: d.pa || '',
+  fundo_cotas: d.fc || '',
+  fundo_exclusivo: d.fe || '',
+  condom: d.co || '',
+  dt_reg: d.dr || '',
+  dt_cancel: d.dc || '',
+  segmentos: d.sg || {},
+  segmento_principal: d.sp || 'outros'
+}));
 
 // Segment colors
 const SEG_COLORS = {
