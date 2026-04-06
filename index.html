@@ -800,6 +800,67 @@ const FIDCS_RAW = [{"c":"14.076.720/0001-45","n":"FUNDO DE INVESTIMENTO EM DIREI
 
 const FIDCS = FIDCS_RAW;
 
+// Segment colors
+const SEG_COLORS = {
+  financeiro: '#0066CC',
+  comercial: '#22d3ee',
+  industrial: '#FF6B00',
+  servicos: '#4ade80',
+  judicial: '#ef4444',
+  setor_publico: '#a855f7',
+  agronegocio: '#f59e0b',
+  credito: '#ec4899',
+  imobiliario: '#818cf8',
+  factoring: '#fb923c',
+  fic_fidc: '#a855f7',
+  outros: '#5a6a8a',
+  '': '#5a6a8a'
+};
+
+const SEG_LABELS = {
+  financeiro: 'Financeiro',
+  comercial: 'Comercial',
+  industrial: 'Industrial',
+  servicos: 'Serviços',
+  judicial: 'Judicial',
+  setor_publico: 'Setor Público',
+  agronegocio: 'Agronegócio',
+  credito: 'Crédito',
+  imobiliario: 'Imobiliário',
+  factoring: 'Factoring',
+  fic_fidc: 'FIC-FIDC',
+  outros: 'Outros',
+  '': 'Outros'
+};
+
+// ── Formatters ──
+function fmtBRL(v, decimals = 1) {
+  if (!v || isNaN(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs >= 1e12) return `R$ ${(v/1e12).toFixed(decimals).replace('.',',')}T`;
+  if (abs >= 1e9) return `R$ ${(v/1e9).toFixed(decimals).replace('.',',')}B`;
+  if (abs >= 1e6) return `R$ ${(v/1e6).toFixed(decimals).replace('.',',')}M`;
+  if (abs >= 1e3) return `R$ ${Math.round(v/1e3).toLocaleString('pt-BR')}K`;
+  return `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits:0,maximumFractionDigits:0})}`;
+}
+
+function fmtPct(v) {
+  if (!v || isNaN(v)) return '—';
+  return (v * 100).toFixed(2).replace('.',',') + '%';
+}
+
+function fmtNum(v) {
+  if (v === undefined || v === null) return '—';
+  return v.toLocaleString('pt-BR');
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  const parts = s.split('-');
+  if (parts.length !== 3) return s;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
 // ── Badge helpers ──
 function situacaoBadge(s) {
   if (!s) return '<span class="badge badge-gray">—</span>';
