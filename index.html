@@ -2557,7 +2557,11 @@ function buildSegsHtml(segs) {
 }
 
 
-renderMode('overview');
+try {
+  renderMode('overview');
+} catch(e) {
+  console.error('renderMode error:', e);
+}
 document.getElementById('loading').style.display = 'none';
 
 // Handle resize (debounced — avoid re-render on minor viewport shifts)
